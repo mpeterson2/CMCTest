@@ -43,6 +43,8 @@ void ACMCTestCharacter::BeginPlay()
 {
 	// Call the base class
 	Super::BeginPlay();
+
+	MovementComponent = Cast<UCMCTestCharacterMovementComponent>(GetCharacterMovement());
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -61,6 +63,9 @@ void ACMCTestCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCo
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACMCTestCharacter::Look);
+
+		EnhancedInputComponent->BindAction(PullAction, ETriggerEvent::Started, this, &ACMCTestCharacter::StartPull);
+		EnhancedInputComponent->BindAction(PullAction, ETriggerEvent::Completed, this, &ACMCTestCharacter::StopPull);
 	}
 	else
 	{
@@ -92,4 +97,14 @@ void ACMCTestCharacter::Look(const FInputActionValue &Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void ACMCTestCharacter::StartPull(const FInputActionValue &Value)
+{
+	MovementComponent->WantsToPull = true;
+}
+
+void ACMCTestCharacter::StopPull(const FInputActionValue &Value)
+{
+	MovementComponent->WantsToPull = false;
 }

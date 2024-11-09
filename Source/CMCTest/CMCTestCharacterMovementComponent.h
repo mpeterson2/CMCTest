@@ -9,6 +9,8 @@ class FCharacterSavedMove : public FSavedMove_Character
   typedef FSavedMove_Character Super;
 
 public:
+  bool WantsToPull;
+
 protected:
   virtual bool CanCombineWith(const FSavedMovePtr &newMove, ACharacter *inCharacter, float maxDelta) const override;
   virtual void Clear() override;
@@ -24,6 +26,8 @@ class FNetworkMoveData : public FCharacterNetworkMoveData
 {
 public:
   typedef FCharacterNetworkMoveData Super;
+
+  bool WantsToPull;
 
   virtual void ClientFillNetworkMoveData(const FSavedMove_Character &clientMove, ENetworkMoveType moveType) override;
 
@@ -61,4 +65,17 @@ public:
   UCMCTestCharacterMovementComponent(const FObjectInitializer &objectInitializer);
   virtual void BeginPlay() override;
   virtual FNetworkPredictionData_Client *GetPredictionData_Client() const override;
+  virtual void MoveAutonomous(float clientTimeStamp, float deltaTime, uint8 compressedFlags, const FVector &newAccel)
+      override;
+  virtual void OnMovementUpdated(float deltaSeconds, const FVector &oldLocation, const FVector &oldVelocity) override;
+  virtual void CalcVelocity(float deltaTime, float friction, bool bFluid, float brakingDeceleration) override;
+
+  bool WantsToPull;
+
+  bool IsPulling;
+  AActor *HitActor;
+  FVector OffsetOnActor;
+  float PullSpeed;
+  float MaxPullSpeed = 2000;
+  float PullAcceleration = 4000;
 };

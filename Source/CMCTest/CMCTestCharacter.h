@@ -12,6 +12,7 @@ class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
+class UCMCTestCharacterMovementComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -37,11 +38,16 @@ class ACMCTestCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction *MoveAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction *PullAction;
+
 public:
 	ACMCTestCharacter(const FObjectInitializer &ObjectInitializer);
 
 protected:
 	virtual void BeginPlay();
+
+	UCMCTestCharacterMovementComponent *MovementComponent;
 
 public:
 	/** Look Input Action */
@@ -54,6 +60,9 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue &Value);
+
+	void StartPull(const FInputActionValue &Value);
+	void StopPull(const FInputActionValue &Value);
 
 protected:
 	// APawn interface
