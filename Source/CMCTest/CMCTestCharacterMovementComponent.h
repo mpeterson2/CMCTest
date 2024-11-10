@@ -25,9 +25,6 @@ public:
 
   // SAFE variables
   bool bWantsToLaunchMoveData = false;
-
-  // UNSAFE variables
-  float MaxCustomSpeedMoveData = 800.f;
   FVector LaunchVelocityCustomMoveData = FVector(0.f, 0.f, 0.f);
 
   // This bypasses the limitations of the typical compressed flags used in past versions of UE4.
@@ -58,11 +55,6 @@ public:
 
   bool bWantsToLaunchSaved = false;
 
-  // Contains our saved custom movement flags, like CFLAG_WantsToFly.
-  uint8 SavedMovementFlagCustom = 0;
-
-  // Variables
-  float SavedMaxCustomSpeed = 800.f;
   FVector SavedLaunchVelocityCustom = FVector(0.f, 0.f, 0.f);
 
   /** Returns a byte containing encoded special movement information (jumping, crouching, etc.)	 */
@@ -100,31 +92,6 @@ public:
 /////BEGIN CMC Setup/////
 #pragma region CMC Setup
 
-/* Our optimised movement flag container.
- * This uses bitshifting to pack a whole lot of extra flags into one tiny container, which can lower your bitrate usage.
- * Sending larger data types via packed moves can negatively impact network performance.
- * However, every project is different. You might prefer the readability and ease of use of using normal data types like bools (as demonstrated).
- * But this may not cut it in a networked environment that requires minimal network usage (like saving on server bandwidth costs in AA to AAA games).
- */
-UENUM(BlueprintType, Meta = (Bitflags))
-enum class EMovementFlag : uint8
-{
-  NONE = 0 UMETA(Hidden), // Requires a 0 entry as default when initialised, but we hide it from BP.
-
-  CFLAG_WantsToFly = 1 << 0,
-
-  CFLAG_OtherFlag1 = 1 << 1,
-  CFLAG_OtherFlag2 = 1 << 2,
-  CFLAG_OtherFlag3 = 1 << 3,
-};
-
-/**
- * Forward-declare our imported classes that are referenced here.
- * We do this to reduce header file overhead. Too many includes in a header file that is then included in subsequent header files can bog down compile times.
- * Also, most classes that include this header may not need all of the references contained in the .cpp file.
- * Thus, we declare external classes here in the header and include required headers in the .cpp file.
- * There are certainly exceptions to this rule, such as reducing the need to include common classes by hosting them within a certain header file.
- */
 class ACMCTestCharacter;
 
 /**
@@ -159,52 +126,6 @@ public:
 
   UFUNCTION(BlueprintCallable)
   virtual void ClearMovementFlag(UPARAM(meta = (Bitmask, BitmaskEnum = EMovementFlag)) uint8 FlagToClear);
-
-#pragma region Flying
-
-  /*
-   * This is different from our other replicated simulated proxy variables (this is not replicated).
-   * Because we have an enter/exit mode when the movement mode changes, our bIsFlying bool is automatically updated on simulated proxies when they apply the new movement mode.
-   * Of course, we might not want some logic to run on sim proxies, but you can simply perform checks for that.
-   * Just keep track of where code will and will not (or should not) be run on simulated proxies.
-   * Working around movement mode changes works well for setting extra variables.
-   * You could make this variable protected/private and expose an accessor method to BP, but this works just fine. Even something like MovementMode is publicly accessible in the parent classes.
-   * Pick a pattern or stick to coding conventions adopted by your team/company/etc.
-   */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flying")
-  bool bIsFlying;
-
-  // This function will be called in OnMovementUpdated to change movement modes if able.
-  UFUNCTION(BlueprintCallable)
-  virtual bool CanFly() const;
-
-  /*
-   * This is a great way to expose easy helper functions to BP.
-   * Instead of having to call IsFlagActive directly for common checks, you can also add in helpers like this.
-   * But IsFlagActive is already quite easy to use in BP because of how it was declared, so these helpers are still completely optional.
-   * It is included here as an example.
-   */
-  UFUNCTION(BlueprintCallable)
-  virtual bool DoesCharacterWantToFly() const { return IsFlagActive((uint8)EMovementFlag::CFLAG_WantsToFly); }
-
-  /*We make our enter/exit functions private/protected so people don't accidentally call them when trying to start/end flying.
-   * We should ALWAYS use SetMovementMode instead based on our design pattern.
-   * Always consider how your function names and their visibility can accidentally mislead your team members.
-   * private/protected exists for this reason. It is also best to have accessible documentation for team members to reference and understand your design pattern.
-   */
-protected:
-  /*
-   * Here we have our ENTER/EXIT functions for the flying movement mode.
-   */
-  UFUNCTION(BlueprintNativeEvent, Category = "Flying")
-  void EnterFlying();
-  virtual void EnterFlying_Implementation();
-
-  UFUNCTION(BlueprintNativeEvent, Category = "Flying")
-  void ExitFlying();
-  virtual void ExitFlying_Implementation();
-
-#pragma endregion
 
 #pragma region Replicated Launch
 
@@ -245,12 +166,6 @@ public:
 
   /** Consider this to be the final chance to change logic before the next tick. It can be useful to defer certain actions to the next tick. */
   virtual void OnMovementUpdated(float DeltaSeconds, const FVector &OldLocation, const FVector &OldVelocity) override;
-
-protected:
-  /** Called after MovementMode has changed. Base implementation performs special handling for starting certain modes, then notifies the CharacterOwner.
-   *	We update it to become our central movement mode switching function. All enter/exit functions should be stored here or in SetMovementMode.
-   */
-  virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 
 public:
 /////BEGIN Networked Movement/////
