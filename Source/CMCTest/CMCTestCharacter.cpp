@@ -101,10 +101,10 @@ void ACMCTestCharacter::Look(const FInputActionValue &Value)
 
 void ACMCTestCharacter::StartPull(const FInputActionValue &Value)
 {
-	MovementComponent->StartLaunching();
+	MovementComponent->WantsToPull = true;
 }
 
 void ACMCTestCharacter::StopPull(const FInputActionValue &Value)
 {
-	MovementComponent->StopLaunching();
+	MovementComponent->WantsToPull = false;
 }

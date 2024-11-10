@@ -9,7 +9,7 @@ class FCustomSavedMove : public FSavedMove_Character
   typedef FSavedMove_Character Super;
 
 public:
-  bool bWantsToLaunchSaved;
+  bool WantsToPull;
 
   virtual bool CanCombineWith(const FSavedMovePtr &newMove, ACharacter *character, float maxDelta) const override;
   virtual void Clear() override;
@@ -26,7 +26,7 @@ class FCustomNetworkMoveData : public FCharacterNetworkMoveData
 public:
   typedef FCharacterNetworkMoveData Super;
 
-  bool bWantsToLaunchMoveData;
+  bool WantsToPull;
 
   virtual void ClientFillNetworkMoveData(const FSavedMove_Character &clientMove, ENetworkMoveType moveType) override;
   virtual bool Serialize(
@@ -66,10 +66,5 @@ public:
       override;
   virtual void OnMovementUpdated(float deltaSeconds, const FVector &oldLocation, const FVector &oldVelocity) override;
 
-  bool bWantsToLaunch;
-
-  UFUNCTION(BlueprintCallable)
-  void StartLaunching();
-  UFUNCTION(BlueprintCallable)
-  void StopLaunching();
+  bool WantsToPull;
 };

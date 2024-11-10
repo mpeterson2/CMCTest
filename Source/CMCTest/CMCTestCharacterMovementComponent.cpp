@@ -7,7 +7,7 @@ void FCustomNetworkMoveData::ClientFillNetworkMoveData(const FSavedMove_Characte
 
   auto savedMove = static_cast<const FCustomSavedMove &>(clientMove);
 
-  bWantsToLaunchMoveData = savedMove.bWantsToLaunchSaved;
+  WantsToPull = savedMove.WantsToPull;
 }
 
 bool FCustomNetworkMoveData::Serialize(
@@ -18,7 +18,7 @@ bool FCustomNetworkMoveData::Serialize(
 {
   Super::Serialize(characterMovement, archive, packageMap, moveType);
 
-  SerializeOptionalValue<bool>(archive.IsSaving(), archive, bWantsToLaunchMoveData, false);
+  SerializeOptionalValue<bool>(archive.IsSaving(), archive, WantsToPull, false);
 
   return !archive.IsError();
 }
@@ -27,7 +27,7 @@ bool FCustomSavedMove::CanCombineWith(const FSavedMovePtr &newMove, ACharacter *
 {
   auto newCharacterMove = static_cast<FCustomSavedMove *>(newMove.Get());
 
-  if (bWantsToLaunchSaved != newCharacterMove->bWantsToLaunchSaved)
+  if (WantsToPull != newCharacterMove->WantsToPull)
   {
     return false;
   }
@@ -39,7 +39,7 @@ void FCustomSavedMove::Clear()
 {
   Super::Clear();
 
-  bWantsToLaunchSaved = false;
+  WantsToPull = false;
 }
 
 void FCustomSavedMove::SetMoveFor(
@@ -53,7 +53,7 @@ void FCustomSavedMove::SetMoveFor(
   auto characterMovement = Cast<UCMCTestCharacterMovementComponent>(character->GetCharacterMovement());
   if (characterMovement)
   {
-    bWantsToLaunchSaved = characterMovement->bWantsToLaunch;
+    WantsToPull = characterMovement->WantsToPull;
   }
 }
 
@@ -62,7 +62,7 @@ void FCustomSavedMove::PrepMoveFor(ACharacter *character)
   Super::PrepMoveFor(character);
 
   auto characterMovement = Cast<UCMCTestCharacterMovementComponent>(character->GetCharacterMovement());
-  characterMovement->bWantsToLaunch = bWantsToLaunchSaved;
+  characterMovement->WantsToPull = WantsToPull;
 }
 
 FCustomCharacterNetworkMoveDataContainer::FCustomCharacterNetworkMoveDataContainer()
@@ -109,7 +109,7 @@ void UCMCTestCharacterMovementComponent::MoveAutonomous(float clientTimeStamp, f
 {
   if (auto moveData = static_cast<FCustomNetworkMoveData *>(GetCurrentNetworkMoveData()))
   {
-    bWantsToLaunch = moveData->bWantsToLaunchMoveData;
+    WantsToPull = moveData->WantsToPull;
   }
 
   Super::MoveAutonomous(clientTimeStamp, deltaTime, compressedFlags, newAccel);
@@ -119,19 +119,9 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float deltaSeconds, c
 {
   Super::OnMovementUpdated(deltaSeconds, oldLocation, oldVelocity);
 
-  if (bWantsToLaunch)
+  if (WantsToPull)
   {
     auto velocity = GetCharacterOwner()->GetViewRotation().Vector() * 1000;
     Launch(velocity);
   }
-}
-
-void UCMCTestCharacterMovementComponent::StartLaunching()
-{
-  bWantsToLaunch = true;
-}
-
-void UCMCTestCharacterMovementComponent::StopLaunching()
-{
-  bWantsToLaunch = false;
 }
