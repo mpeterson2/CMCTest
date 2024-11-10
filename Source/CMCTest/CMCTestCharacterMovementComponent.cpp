@@ -1,16 +1,16 @@
 #include "CMCTestCharacterMovementComponent.h"
 #include "GameFramework/Character.h"
 
-void FCustomNetworkMoveData::ClientFillNetworkMoveData(const FSavedMove_Character &clientMove, ENetworkMoveType moveType)
+void FNetworkMoveData::ClientFillNetworkMoveData(const FSavedMove_Character &clientMove, ENetworkMoveType moveType)
 {
   Super::ClientFillNetworkMoveData(clientMove, moveType);
 
-  auto savedMove = static_cast<const FCustomSavedMove &>(clientMove);
+  auto savedMove = static_cast<const FCharacterSavedMove &>(clientMove);
 
   WantsToPull = savedMove.WantsToPull;
 }
 
-bool FCustomNetworkMoveData::Serialize(
+bool FNetworkMoveData::Serialize(
     UCharacterMovementComponent &characterMovement,
     FArchive &archive,
     UPackageMap *packageMap,
@@ -23,9 +23,9 @@ bool FCustomNetworkMoveData::Serialize(
   return !archive.IsError();
 }
 
-bool FCustomSavedMove::CanCombineWith(const FSavedMovePtr &newMove, ACharacter *character, float maxDelta) const
+bool FCharacterSavedMove::CanCombineWith(const FSavedMovePtr &newMove, ACharacter *character, float maxDelta) const
 {
-  auto newCharacterMove = static_cast<FCustomSavedMove *>(newMove.Get());
+  auto newCharacterMove = static_cast<FCharacterSavedMove *>(newMove.Get());
 
   if (WantsToPull != newCharacterMove->WantsToPull)
   {
@@ -35,14 +35,13 @@ bool FCustomSavedMove::CanCombineWith(const FSavedMovePtr &newMove, ACharacter *
   return Super::CanCombineWith(newMove, character, maxDelta);
 }
 
-void FCustomSavedMove::Clear()
+void FCharacterSavedMove::Clear()
 {
   Super::Clear();
-
   WantsToPull = false;
 }
 
-void FCustomSavedMove::SetMoveFor(
+void FCharacterSavedMove::SetMoveFor(
     ACharacter *character,
     float inDeltaTime,
     FVector const &newAccel,
@@ -51,13 +50,10 @@ void FCustomSavedMove::SetMoveFor(
   Super::SetMoveFor(character, inDeltaTime, newAccel, clientData);
 
   auto characterMovement = Cast<UCMCTestCharacterMovementComponent>(character->GetCharacterMovement());
-  if (characterMovement)
-  {
-    WantsToPull = characterMovement->WantsToPull;
-  }
+  WantsToPull = characterMovement->WantsToPull;
 }
 
-void FCustomSavedMove::PrepMoveFor(ACharacter *character)
+void FCharacterSavedMove::PrepMoveFor(ACharacter *character)
 {
   Super::PrepMoveFor(character);
 
@@ -65,22 +61,22 @@ void FCustomSavedMove::PrepMoveFor(ACharacter *character)
   characterMovement->WantsToPull = WantsToPull;
 }
 
-FCustomCharacterNetworkMoveDataContainer::FCustomCharacterNetworkMoveDataContainer()
+FNetworkMoveDataContainer::FNetworkMoveDataContainer()
 {
   NewMoveData = &MoveData[0];
   PendingMoveData = &MoveData[1];
   OldMoveData = &MoveData[2];
 }
 
-FCustomNetworkPredictionData_Client::FCustomNetworkPredictionData_Client(const UCharacterMovementComponent &ClientMovement) : Super(ClientMovement)
+FCharacterPredictionData::FCharacterPredictionData(const UCharacterMovementComponent &ClientMovement) : Super(ClientMovement)
 {
   MaxSmoothNetUpdateDist = 92.f;
   NoSmoothNetUpdateDist = 140.f;
 }
 
-FSavedMovePtr FCustomNetworkPredictionData_Client::AllocateNewMove()
+FSavedMovePtr FCharacterPredictionData::AllocateNewMove()
 {
-  return FSavedMovePtr(new FCustomSavedMove());
+  return FSavedMovePtr(new FCharacterSavedMove());
 }
 
 UCMCTestCharacterMovementComponent::UCMCTestCharacterMovementComponent(const FObjectInitializer &objectInitializer) : Super(objectInitializer)
@@ -99,7 +95,7 @@ FNetworkPredictionData_Client *UCMCTestCharacterMovementComponent::GetPrediction
   if (ClientPredictionData == nullptr)
   {
     UCMCTestCharacterMovementComponent *mutableThis = const_cast<UCMCTestCharacterMovementComponent *>(this);
-    mutableThis->ClientPredictionData = new FCustomNetworkPredictionData_Client(*this);
+    mutableThis->ClientPredictionData = new FCharacterPredictionData(*this);
   }
 
   return ClientPredictionData;
@@ -107,7 +103,7 @@ FNetworkPredictionData_Client *UCMCTestCharacterMovementComponent::GetPrediction
 
 void UCMCTestCharacterMovementComponent::MoveAutonomous(float clientTimeStamp, float deltaTime, uint8 compressedFlags, const FVector &newAccel)
 {
-  if (auto moveData = static_cast<FCustomNetworkMoveData *>(GetCurrentNetworkMoveData()))
+  if (auto moveData = static_cast<FNetworkMoveData *>(GetCurrentNetworkMoveData()))
   {
     WantsToPull = moveData->WantsToPull;
   }

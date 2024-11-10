@@ -4,7 +4,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CMCTestCharacterMovementComponent.generated.h"
 
-class FCustomSavedMove : public FSavedMove_Character
+class FCharacterSavedMove : public FSavedMove_Character
 {
   typedef FSavedMove_Character Super;
 
@@ -21,7 +21,7 @@ public:
   virtual void PrepMoveFor(class ACharacter *character) override;
 };
 
-class FCustomNetworkMoveData : public FCharacterNetworkMoveData
+class FNetworkMoveData : public FCharacterNetworkMoveData
 {
 public:
   typedef FCharacterNetworkMoveData Super;
@@ -36,17 +36,17 @@ public:
       ENetworkMoveType moveType) override;
 };
 
-class FCustomCharacterNetworkMoveDataContainer : public FCharacterNetworkMoveDataContainer
+class FNetworkMoveDataContainer : public FCharacterNetworkMoveDataContainer
 {
 public:
-  FCustomCharacterNetworkMoveDataContainer();
-  FCustomNetworkMoveData MoveData[3];
+  FNetworkMoveDataContainer();
+  FNetworkMoveData MoveData[3];
 };
 
-class FCustomNetworkPredictionData_Client : public FNetworkPredictionData_Client_Character
+class FCharacterPredictionData : public FNetworkPredictionData_Client_Character
 {
 public:
-  FCustomNetworkPredictionData_Client(const UCharacterMovementComponent &clientMovement);
+  FCharacterPredictionData(const UCharacterMovementComponent &clientMovement);
   typedef FNetworkPredictionData_Client_Character Super;
   virtual FSavedMovePtr AllocateNewMove() override;
 };
@@ -56,7 +56,7 @@ class UCMCTestCharacterMovementComponent : public UCharacterMovementComponent
 {
   GENERATED_BODY()
 protected:
-  FCustomCharacterNetworkMoveDataContainer MoveDataContainer;
+  FNetworkMoveDataContainer MoveDataContainer;
 
 public:
   UCMCTestCharacterMovementComponent(const FObjectInitializer &objectInitializer);
