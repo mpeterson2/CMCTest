@@ -102,14 +102,15 @@ FNetworkPredictionData_Client *UCMCTestCharacterMovementComponent::GetPrediction
 
   return ClientPredictionData;
 }
+
 void UCMCTestCharacterMovementComponent::MoveAutonomous(float clientTimeStamp, float deltaTime, uint8 compressedFlags, const FVector &newAccel)
 {
-  Super::MoveAutonomous(clientTimeStamp, deltaTime, compressedFlags, newAccel);
-
   if (auto moveData = static_cast<FNetworkMoveData *>(GetCurrentNetworkMoveData()))
   {
     WantsToPull = moveData->WantsToPull;
   }
+
+  Super::MoveAutonomous(clientTimeStamp, deltaTime, compressedFlags, newAccel);
 }
 
 void UCMCTestCharacterMovementComponent::OnMovementUpdated(float deltaSeconds, const FVector &oldLocation, const FVector &oldVelocity)
@@ -137,15 +138,10 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float deltaSeconds, c
   {
     IsPulling = false;
   }
-}
-
-void UCMCTestCharacterMovementComponent::CalcVelocity(float deltaTime, float friction, bool bFluid, float brakingDeceleration)
-{
-  Super::CalcVelocity(deltaTime, friction, bFluid, brakingDeceleration);
 
   if (IsPulling)
   {
-    PullSpeed = FMath::Min(PullSpeed + PullAcceleration * deltaTime, MaxPullSpeed);
+    PullSpeed = FMath::Min(PullSpeed + PullAcceleration * deltaSeconds, MaxPullSpeed);
 
     auto ownerLocation = GetActorLocation();
     auto pullPoint = HitActor->GetActorLocation() + OffsetOnActor;

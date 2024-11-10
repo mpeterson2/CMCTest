@@ -30,7 +30,6 @@ public:
   bool WantsToPull;
 
   virtual void ClientFillNetworkMoveData(const FSavedMove_Character &clientMove, ENetworkMoveType moveType) override;
-
   virtual bool Serialize(
       UCharacterMovementComponent &characterMovement,
       FArchive &archive,
@@ -48,7 +47,7 @@ public:
 class FCharacterPredictionData : public FNetworkPredictionData_Client_Character
 {
 public:
-  FCharacterPredictionData(const UCharacterMovementComponent &ClientMovement);
+  FCharacterPredictionData(const UCharacterMovementComponent &clientMovement);
   typedef FNetworkPredictionData_Client_Character Super;
   virtual FSavedMovePtr AllocateNewMove() override;
 };
@@ -68,7 +67,6 @@ public:
   virtual void MoveAutonomous(float clientTimeStamp, float deltaTime, uint8 compressedFlags, const FVector &newAccel)
       override;
   virtual void OnMovementUpdated(float deltaSeconds, const FVector &oldLocation, const FVector &oldVelocity) override;
-  virtual void CalcVelocity(float deltaTime, float friction, bool bFluid, float brakingDeceleration) override;
 
   bool WantsToPull;
 
