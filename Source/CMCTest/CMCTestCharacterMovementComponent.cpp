@@ -130,11 +130,6 @@ FSavedMovePtr FCustomNetworkPredictionData_Client::AllocateNewMove()
   return FSavedMovePtr(new FCustomSavedMove());
 }
 
-void UCMCTestCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
-{
-  Super::UpdateFromCompressedFlags(Flags);
-}
-
 FCustomCharacterNetworkMoveDataContainer::FCustomCharacterNetworkMoveDataContainer()
 {
   NewMoveData = &CustomDefaultMoveData[0];

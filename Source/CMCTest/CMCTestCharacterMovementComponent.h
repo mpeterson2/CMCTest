@@ -76,9 +76,6 @@ public:
 
 public:
   FCustomCharacterNetworkMoveDataContainer MoveDataContainer;
-
-  virtual void UpdateFromCompressedFlags(uint8 Flags) override;
   virtual void MoveAutonomous(float ClientTimeStamp, float DeltaTime, uint8 CompressedFlags, const FVector &NewAccel) override;
-
   virtual class FNetworkPredictionData_Client *GetPredictionData_Client() const override;
 };
