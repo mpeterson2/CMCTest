@@ -11,14 +11,15 @@ class FCharacterSavedMove : public FSavedMove_Character
 public:
   bool WantsToPull;
 
-  virtual bool CanCombineWith(const FSavedMovePtr &newMove, ACharacter *character, float maxDelta) const override;
+protected:
+  virtual bool CanCombineWith(const FSavedMovePtr &newMove, ACharacter *inCharacter, float maxDelta) const override;
   virtual void Clear() override;
   virtual void SetMoveFor(
       ACharacter *character,
       float inDeltaTime,
       FVector const &newAccel,
       FNetworkPredictionData_Client_Character &clientData) override;
-  virtual void PrepMoveFor(class ACharacter *character) override;
+  virtual void PrepMoveFor(ACharacter *character) override;
 };
 
 class FNetworkMoveData : public FCharacterNetworkMoveData
@@ -55,6 +56,7 @@ UCLASS()
 class UCMCTestCharacterMovementComponent : public UCharacterMovementComponent
 {
   GENERATED_BODY()
+
 protected:
   FNetworkMoveDataContainer MoveDataContainer;
 

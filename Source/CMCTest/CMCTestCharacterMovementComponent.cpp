@@ -23,7 +23,7 @@ bool FNetworkMoveData::Serialize(
   return !archive.IsError();
 }
 
-bool FCharacterSavedMove::CanCombineWith(const FSavedMovePtr &newMove, ACharacter *character, float maxDelta) const
+bool FCharacterSavedMove::CanCombineWith(const FSavedMovePtr &newMove, ACharacter *inCharacter, float maxDelta) const
 {
   auto newCharacterMove = static_cast<FCharacterSavedMove *>(newMove.Get());
 
@@ -32,7 +32,7 @@ bool FCharacterSavedMove::CanCombineWith(const FSavedMovePtr &newMove, ACharacte
     return false;
   }
 
-  return Super::CanCombineWith(newMove, character, maxDelta);
+  return Super::CanCombineWith(newMove, inCharacter, maxDelta);
 }
 
 void FCharacterSavedMove::Clear()
@@ -68,7 +68,8 @@ FNetworkMoveDataContainer::FNetworkMoveDataContainer()
   OldMoveData = &MoveData[2];
 }
 
-FCharacterPredictionData::FCharacterPredictionData(const UCharacterMovementComponent &ClientMovement) : Super(ClientMovement)
+FCharacterPredictionData::FCharacterPredictionData(const UCharacterMovementComponent &ClientMovement)
+    : Super(ClientMovement)
 {
   MaxSmoothNetUpdateDist = 92.f;
   NoSmoothNetUpdateDist = 140.f;
@@ -79,7 +80,8 @@ FSavedMovePtr FCharacterPredictionData::AllocateNewMove()
   return FSavedMovePtr(new FCharacterSavedMove());
 }
 
-UCMCTestCharacterMovementComponent::UCMCTestCharacterMovementComponent(const FObjectInitializer &objectInitializer) : Super(objectInitializer)
+UCMCTestCharacterMovementComponent::UCMCTestCharacterMovementComponent(const FObjectInitializer &objectInitializer)
+    : Super(objectInitializer)
 {
   SetIsReplicatedByDefault(true);
   SetNetworkMoveDataContainer(MoveDataContainer);
@@ -94,7 +96,7 @@ FNetworkPredictionData_Client *UCMCTestCharacterMovementComponent::GetPrediction
 {
   if (ClientPredictionData == nullptr)
   {
-    UCMCTestCharacterMovementComponent *mutableThis = const_cast<UCMCTestCharacterMovementComponent *>(this);
+    auto mutableThis = const_cast<UCMCTestCharacterMovementComponent *>(this);
     mutableThis->ClientPredictionData = new FCharacterPredictionData(*this);
   }
 
