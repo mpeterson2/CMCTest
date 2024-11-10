@@ -179,6 +179,8 @@ FNetworkPredictionData_Client *UCMCTestCharacterMovementComponent::GetPrediction
 
 FCustomNetworkPredictionData_Client::FCustomNetworkPredictionData_Client(const UCharacterMovementComponent &ClientMovement) : Super(ClientMovement)
 {
+  MaxSmoothNetUpdateDist = 92.f;
+  NoSmoothNetUpdateDist = 140.f;
 }
 
 FSavedMovePtr FCustomNetworkPredictionData_Client::AllocateNewMove()
