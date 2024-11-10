@@ -65,7 +65,6 @@ public:
   virtual void MoveAutonomous(float clientTimeStamp, float deltaTime, uint8 compressedFlags, const FVector &newAccel)
       override;
   virtual void OnMovementUpdated(float deltaSeconds, const FVector &oldLocation, const FVector &oldVelocity) override;
-  virtual void CalcVelocity(float deltaTime, float friction, bool bFluid, float brakingDeceleration) override;
 
   bool WantsToPull;
 

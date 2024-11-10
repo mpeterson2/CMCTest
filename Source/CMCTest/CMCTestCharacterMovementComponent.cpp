@@ -140,15 +140,10 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float deltaSeconds, c
   {
     IsPulling = false;
   }
-}
-
-void UCMCTestCharacterMovementComponent::CalcVelocity(float deltaTime, float friction, bool bFluid, float brakingDeceleration)
-{
-  Super::CalcVelocity(deltaTime, friction, bFluid, brakingDeceleration);
 
   if (IsPulling)
   {
-    PullSpeed = FMath::Min(PullSpeed + PullAcceleration * deltaTime, MaxPullSpeed);
+    PullSpeed = FMath::Min(PullSpeed + PullAcceleration * deltaSeconds, MaxPullSpeed);
 
     auto ownerLocation = GetActorLocation();
     auto pullPoint = HitActor->GetActorLocation() + OffsetOnActor;
