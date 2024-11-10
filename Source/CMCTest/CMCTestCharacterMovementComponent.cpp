@@ -48,20 +48,6 @@ void UCMCTestCharacterMovementComponent::StopLaunching()
   bWantsToLaunch = false;
 }
 
-bool UCMCTestCharacterMovementComponent::HandlePendingLaunch()
-{
-  if (!PendingLaunchVelocity.IsZero() && HasValidData())
-  {
-    Velocity = PendingLaunchVelocity;
-    SetMovementMode(MOVE_Falling);
-    PendingLaunchVelocity = FVector::ZeroVector;
-    bForceNextFloorCheck = true;
-    return true;
-  }
-
-  return false;
-}
-
 void UCMCTestCharacterMovementComponent::OnMovementUpdated(float DeltaSeconds, const FVector &OldLocation, const FVector &OldVelocity)
 {
   Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);

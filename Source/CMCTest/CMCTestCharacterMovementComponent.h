@@ -71,8 +71,6 @@ public:
   void LaunchCharacterReplicated(FVector NewLaunchVelocity, bool bXYOverride, bool bZOverride);
   FVector LaunchVelocityCustom;
 
-  virtual bool HandlePendingLaunch() override;
-
 protected:
   UPROPERTY(Transient, DuplicateTransient)
   TObjectPtr<ACMCTestCharacter> CustomCharacter;
