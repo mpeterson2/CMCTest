@@ -4,8 +4,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CMCTestCharacterMovementComponent.generated.h"
 
-class ACMCTestCharacter;
-
 class FCustomNetworkMoveData : public FCharacterNetworkMoveData
 {
 public:
@@ -65,10 +63,6 @@ public:
   void StartLaunching();
   UFUNCTION(BlueprintCallable)
   void StopLaunching();
-
-protected:
-  UPROPERTY(Transient, DuplicateTransient)
-  TObjectPtr<ACMCTestCharacter> CustomCharacter;
 
 public:
   virtual void BeginPlay() override;

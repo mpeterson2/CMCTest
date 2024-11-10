@@ -12,7 +12,6 @@ UCMCTestCharacterMovementComponent::UCMCTestCharacterMovementComponent(const FOb
 void UCMCTestCharacterMovementComponent::BeginPlay()
 {
   Super::BeginPlay();
-  CustomCharacter = Cast<ACMCTestCharacter>(PawnOwner);
 }
 
 void UCMCTestCharacterMovementComponent::StartLaunching()
