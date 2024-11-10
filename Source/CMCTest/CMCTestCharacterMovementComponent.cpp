@@ -61,7 +61,7 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float DeltaSeconds, c
   if ((MovementMode != MOVE_None) && IsActive() && HasValidData())
   {
     PendingLaunchVelocity = LaunchVelocityCustom;
-    LaunchVelocityCustom = FVector(0.f, 0.f, 0.f);
+    LaunchVelocityCustom = FVector::ZeroVector;
   }
 }
 
@@ -83,7 +83,7 @@ bool FCustomNetworkMoveData::Serialize(UCharacterMovementComponent &CharacterMov
   Super::Serialize(CharacterMovement, Ar, PackageMap, MoveType);
 
   SerializeOptionalValue<bool>(Ar.IsSaving(), Ar, bWantsToLaunchMoveData, false);
-  SerializeOptionalValue<FVector>(Ar.IsSaving(), Ar, LaunchVelocityCustomMoveData, FVector(0.f, 0.f, 0.f));
+  SerializeOptionalValue<FVector>(Ar.IsSaving(), Ar, LaunchVelocityCustomMoveData, FVector::ZeroVector);
 
   return !Ar.IsError();
 }
@@ -146,7 +146,7 @@ void FCustomSavedMove::Clear()
   Super::Clear();
 
   bWantsToLaunchSaved = false;
-  SavedLaunchVelocityCustom = FVector(0.f, 0.f, 0.f);
+  SavedLaunchVelocityCustom = FVector::ZeroVector;
 }
 
 FNetworkPredictionData_Client *UCMCTestCharacterMovementComponent::GetPredictionData_Client() const
