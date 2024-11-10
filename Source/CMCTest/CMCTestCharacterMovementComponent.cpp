@@ -119,9 +119,43 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float deltaSeconds, c
 {
   Super::OnMovementUpdated(deltaSeconds, oldLocation, oldVelocity);
 
-  if (WantsToPull)
+  if (!IsPulling && WantsToPull)
   {
-    auto velocity = GetCharacterOwner()->GetViewRotation().Vector() * 1000;
+    auto rotation = CharacterOwner->GetViewRotation().Vector();
+    auto traceStart = CharacterOwner->GetActorLocation() + rotation * 200.f;
+    auto traceEnd = traceStart + rotation * 2000.f;
+    FCollisionQueryParams queryParams;
+    TArray<TEnumAsByte<EObjectTypeQuery>> traceObjectTypes;
+    FHitResult hit;
+
+    if (GetWorld()->LineTraceSingleByObjectType(hit, traceStart, traceEnd, traceObjectTypes, queryParams))
+    {
+      IsPulling = true;
+      HitActor = hit.GetActor();
+      OffsetOnActor = hit.Location - HitActor->GetActorLocation();
+      PullSpeed = 0.f;
+    }
+  }
+  else if (IsPulling && !WantsToPull)
+  {
+    IsPulling = false;
+  }
+}
+
+void UCMCTestCharacterMovementComponent::CalcVelocity(float deltaTime, float friction, bool bFluid, float brakingDeceleration)
+{
+  Super::CalcVelocity(deltaTime, friction, bFluid, brakingDeceleration);
+
+  if (IsPulling)
+  {
+    PullSpeed = FMath::Min(PullSpeed + PullAcceleration * deltaTime, MaxPullSpeed);
+
+    auto ownerLocation = GetActorLocation();
+    auto pullPoint = HitActor->GetActorLocation() + OffsetOnActor;
+    auto distance = pullPoint - ownerLocation;
+    auto direction = distance.GetSafeNormal();
+    auto velocity = direction * PullSpeed;
+
     Launch(velocity);
   }
 }
