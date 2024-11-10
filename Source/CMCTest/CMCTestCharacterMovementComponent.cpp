@@ -5,7 +5,6 @@
 
 UCMCTestCharacterMovementComponent::UCMCTestCharacterMovementComponent(const FObjectInitializer &ObjectInitializer) : Super(ObjectInitializer)
 {
-  CustomMaxSpeed = 800.0f;
   SetIsReplicatedByDefault(true);
 
   // Tells the system to use the new packed data system
@@ -17,44 +16,6 @@ void UCMCTestCharacterMovementComponent::BeginPlay()
   Super::BeginPlay();
   CustomCharacter = Cast<ACMCTestCharacter>(PawnOwner);
 }
-
-// Sprinting and movement speed changes
-#pragma region Sprinting + Custom Speed
-
-float UCMCTestCharacterMovementComponent::GetMaxSpeed() const
-{
-  if (MovementMode == MOVE_Custom)
-  {
-
-    switch (CustomMovementMode)
-    {
-    case MOVE_WallRunning:
-      return MaxWallRunSpeed;
-    }
-  }
-
-  return bIsSprinting ? CustomMaxSpeed : Super::GetMaxSpeed();
-}
-
-/*
- * This function does not factor in external state information.
- * If used with GAS, this could be a helper function to determine if the Sprint Ability can be applied or not, alongside the use of gameplay tags and other checks.
- */
-bool UCMCTestCharacterMovementComponent::CanSprint() const
-{
-  if (CustomCharacter && IsMovingOnGround() && bWantsToSprint) // Only sprint if on ground
-  {
-    // Check if moving forward
-    FVector Forward = CharacterOwner->GetActorForwardVector();
-    FVector MoveDirection = Velocity.GetSafeNormal();
-
-    float VelocityDot = FVector::DotProduct(Forward, MoveDirection); // Confirm we are moving forward so the player can't sprint sideways or backwards.
-    return VelocityDot > 0.7f;                                       // Slight lenience so that small changes don't rapidly toggle sprinting. This should be a variable, but it is hard-coded here for simplicity.
-  }
-  return false;
-}
-
-#pragma endregion
 
 #pragma region Replicated Launch
 
@@ -128,64 +89,7 @@ bool UCMCTestCharacterMovementComponent::HandlePendingLaunch()
 
 #pragma endregion
 
-/* Creating custom jump logic is certainly something every dev has or will do.
- * The functions below are your bread and butter for creating networked jump logic.
- */
-#pragma region Custom Jumping
-
-bool UCMCTestCharacterMovementComponent::CanAttemptJump() const
-{
-  return Super::CanAttemptJump() || IsWallRunning();
-}
-
-bool UCMCTestCharacterMovementComponent::DoJump(bool bReplayingMoves)
-{
-  bool bWasWallRunning = IsWallRunning();
-  if (Super::DoJump(bReplayingMoves))
-  {
-    if (bWasWallRunning && CustomCharacter)
-    {
-      FVector Start = UpdatedComponent->GetComponentLocation();
-      FVector CastDelta = UpdatedComponent->GetRightVector() * OwnerCapsuleRadius() * 2;
-      FVector End = bWallRunIsRight ? Start + CastDelta : Start - CastDelta;
-      // auto Params = CustomCharacter->GetIgnoreCharacterParams();
-      FHitResult WallHit;
-      // GetWorld()->LineTraceSingleByProfile(WallHit, Start, End, "BlockAll", Params);
-      Velocity += WallHit.Normal * WallJumpForce;
-    }
-    return true;
-  }
-  return false;
-}
-
-#pragma endregion
-
 #pragma region Custom Movement
-bool UCMCTestCharacterMovementComponent::IsCustomMovementMode(uint8 TestCustomMovementMode) const
-{
-  return MovementMode == EMovementMode::MOVE_Custom && CustomMovementMode == TestCustomMovementMode;
-}
-
-void UCMCTestCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations)
-{
-  // Phys* functions should only run for characters with ROLE_Authority or ROLE_AutonomousProxy. However, Unreal calls PhysCustom in
-  // two separate locations, one of which doesn't check the role, so we must check it here to prevent this code from running on simulated proxies.
-  if (GetOwner()->GetLocalRole() == ROLE_SimulatedProxy)
-    return;
-
-  switch (CustomMovementMode)
-  {
-  case MOVE_WallRunning:
-  {
-    PhysWallRun(deltaTime, Iterations);
-    break;
-  }
-  default:
-    UE_LOG(LogTemp, Fatal, TEXT("Invalid Movement Mode"))
-  }
-
-  Super::PhysCustom(deltaTime, Iterations);
-}
 
 #pragma region Flying
 
@@ -208,181 +112,6 @@ void UCMCTestCharacterMovementComponent::ExitFlying_Implementation()
 }
 
 // We don't need to add our own phys_flying function because it already exists in the CMC! Thanks, Epic!
-#pragma endregion
-
-#pragma region Wall Running
-// Wall running example adapted from Zippy - Copyright (c) 2022 William
-// Edits have been made for our custom character.
-bool UCMCTestCharacterMovementComponent::TryWallRun()
-{
-  // if (!IsFalling())
-  //   return false;
-  // if (Velocity.SizeSquared2D() < pow(MinWallRunSpeed, 2))
-  //   return false;
-  // if (Velocity.Z < -MaxVerticalWallRunSpeed)
-  //   return false;
-  // if (!CustomCharacter)
-  //   return false;
-
-  // FVector Start = UpdatedComponent->GetComponentLocation();
-  // FVector LeftEnd = Start - UpdatedComponent->GetRightVector() * OwnerCapsuleRadius() * 2;
-  // FVector RightEnd = Start + UpdatedComponent->GetRightVector() * OwnerCapsuleRadius() * 2;
-  // // auto Params = CustomCharacter->GetIgnoreCharacterParams();
-  // FHitResult FloorHit, WallHit;
-  // // Check Player Height
-  // // if (GetWorld()->LineTraceSingleByProfile(FloorHit, Start, Start + FVector::DownVector * (OwnerCapsuleHalfHeight() + MinWallRunHeight), "BlockAll", Params))
-  // // {
-  // //   return false;
-  // // }
-
-  // // Left Cast
-  // GetWorld()->LineTraceSingleByProfile(WallHit, Start, LeftEnd, "BlockAll", Params);
-  // if (WallHit.IsValidBlockingHit() && (Velocity | WallHit.Normal) < 0)
-  // {
-  //   bWallRunIsRight = false;
-  // }
-  // // Right Cast
-  // else
-  // {
-  //   GetWorld()->LineTraceSingleByProfile(WallHit, Start, RightEnd, "BlockAll", Params);
-  //   if (WallHit.IsValidBlockingHit() && (Velocity | WallHit.Normal) < 0)
-  //   {
-  //     bWallRunIsRight = true;
-  //   }
-  //   else
-  //   {
-  //     return false;
-  //   }
-  // }
-  // FVector ProjectedVelocity = FVector::VectorPlaneProject(Velocity, WallHit.Normal);
-  // if (ProjectedVelocity.SizeSquared2D() < pow(MinWallRunSpeed, 2))
-  //   return false;
-
-  // // Passed all conditions
-  // Velocity = ProjectedVelocity;
-  // Velocity.Z = FMath::Clamp(Velocity.Z, 0.f, MaxVerticalWallRunSpeed);
-  // SetMovementMode(MOVE_Custom, MOVE_WallRunning);
-  // return true;
-  return false;
-}
-
-/*
- * This code shows how a C++ custom movement mode should be written in respect to an existing pattern within the parent CMC.
- * Be sure to take a look at the structure of each of the Phys functions for physwalking, physflying, etc to see this pattern.
- * Don't be intimidated by the weird-looking variables like remainingtime, Iterations, and so on.
- * This design pattern effectively allows the CMC to SUBTICK.
- * Subticking involves running the simulation a few more times during that frame (tick) to get a higher-fidelity result.
- * Computers are FAST, which is what allows us to do this. That is what the remainingtime and iterations variables track.
- * You can see the examples below (and in the parent phys functions) how you can switch movement modes during a tick, preserving the current remainingtime and iterations.
- * You can enter Falling from Walking during a subtick because you fell off a cliff, for example. But you still have some of that subticking bandwidth available.
- */
-void UCMCTestCharacterMovementComponent::PhysWallRun(float deltaTime, int32 Iterations)
-{
-  // if (deltaTime < MIN_TICK_TIME)
-  // {
-  //   return;
-  // }
-  // if (!CustomCharacter || (!CharacterOwner->Controller && !bRunPhysicsWithNoController && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity() && (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)))
-  // {
-  //   Acceleration = FVector::ZeroVector;
-  //   Velocity = FVector::ZeroVector;
-  //   return;
-  // }
-
-  // bJustTeleported = false;
-  // float remainingTime = deltaTime;
-  // // Perform the move
-  // while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || (CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)))
-  // {
-  //   Iterations++;
-  //   bJustTeleported = false;
-  //   const float timeTick = GetSimulationTimeStep(remainingTime, Iterations);
-  //   remainingTime -= timeTick;
-  //   const FVector OldLocation = UpdatedComponent->GetComponentLocation();
-
-  //   FVector Start = UpdatedComponent->GetComponentLocation();
-  //   FVector CastDelta = UpdatedComponent->GetRightVector() * OwnerCapsuleRadius() * 2;
-  //   FVector End = bWallRunIsRight ? Start + CastDelta : Start - CastDelta;
-  //   auto Params = CustomCharacter->GetIgnoreCharacterParams();
-  //   float SinPullAwayAngle = FMath::Sin(FMath::DegreesToRadians(WallRunPullAwayAngle));
-  //   FHitResult WallHit;
-  //   GetWorld()->LineTraceSingleByProfile(WallHit, Start, End, "BlockAll", Params);
-  //   bool bWantsToPullAway = WallHit.IsValidBlockingHit() && !Acceleration.IsNearlyZero() && (Acceleration.GetSafeNormal() | WallHit.Normal) > SinPullAwayAngle;
-  //   if (!WallHit.IsValidBlockingHit() || bWantsToPullAway)
-  //   {
-  //     SetMovementMode(MOVE_Falling);
-  //     StartNewPhysics(remainingTime, Iterations);
-  //     return;
-  //   }
-  //   // Clamp Acceleration
-  //   Acceleration = FVector::VectorPlaneProject(Acceleration, WallHit.Normal);
-  //   Acceleration.Z = 0.f;
-  //   // Apply acceleration
-  //   CalcVelocity(timeTick, 0.f, false, GetMaxBrakingDeceleration());
-  //   Velocity = FVector::VectorPlaneProject(Velocity, WallHit.Normal);
-  //   float TangentAccel = Acceleration.GetSafeNormal() | Velocity.GetSafeNormal2D();
-  //   bool bVelUp = Velocity.Z > 0.f;
-  //   Velocity.Z += GetGravityZ() * (WallRunGravityScaleCurve ? WallRunGravityScaleCurve->GetFloatValue(bVelUp ? 0.f : TangentAccel) * timeTick : 0.0f);
-  //   if (Velocity.SizeSquared2D() < pow(MinWallRunSpeed, 2) || Velocity.Z < -MaxVerticalWallRunSpeed)
-  //   {
-  //     SetMovementMode(MOVE_Falling);
-  //     StartNewPhysics(remainingTime, Iterations);
-  //     return;
-  //   }
-
-  //   // Compute move parameters
-  //   const FVector Delta = timeTick * Velocity; // dx = v * dt
-  //   const bool bZeroDelta = Delta.IsNearlyZero();
-  //   if (bZeroDelta)
-  //   {
-  //     remainingTime = 0.f;
-  //   }
-  //   else
-  //   {
-  //     FHitResult Hit;
-  //     SafeMoveUpdatedComponent(Delta, UpdatedComponent->GetComponentQuat(), true, Hit);
-  //     FVector WallAttractionDelta = -WallHit.Normal * WallAttractionForce * timeTick;
-  //     SafeMoveUpdatedComponent(WallAttractionDelta, UpdatedComponent->GetComponentQuat(), true, Hit);
-  //   }
-  //   if (UpdatedComponent->GetComponentLocation() == OldLocation)
-  //   {
-  //     remainingTime = 0.f;
-  //     break;
-  //   }
-  //   Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / timeTick; // v = dx / dt
-  // }
-
-  // FVector Start = UpdatedComponent->GetComponentLocation();
-  // FVector CastDelta = UpdatedComponent->GetRightVector() * OwnerCapsuleRadius() * 2;
-  // FVector End = bWallRunIsRight ? Start + CastDelta : Start - CastDelta;
-  // auto Params = CustomCharacter->GetIgnoreCharacterParams();
-  // FHitResult FloorHit, WallHit;
-  // GetWorld()->LineTraceSingleByProfile(WallHit, Start, End, "BlockAll", Params);
-  // GetWorld()->LineTraceSingleByProfile(FloorHit, Start, Start + FVector::DownVector * (OwnerCapsuleHalfHeight() + MinWallRunHeight * .5f), "BlockAll", Params);
-  // if (FloorHit.IsValidBlockingHit() || !WallHit.IsValidBlockingHit() || Velocity.SizeSquared2D() < pow(MinWallRunSpeed, 2))
-  // {
-  //   SetMovementMode(MOVE_Falling);
-  // }
-}
-
-// Code to execute upon entering wall running
-void UCMCTestCharacterMovementComponent::EnterWallRun_Implementation()
-{
-  // You can enter your own logic here.
-}
-
-// Cleanup upon leaving wall running
-void UCMCTestCharacterMovementComponent::ExitWallRun_Implementation()
-{
-  // You can enter your own logic here.
-}
-
-void UCMCTestCharacterMovementComponent::ProcessLanded(const FHitResult &Hit, float remainingTime, int32 Iterations)
-{
-  Super::ProcessLanded(Hit, remainingTime, Iterations);
-
-  // A useful place to reset some logic upon landing.
-}
 #pragma endregion
 
 // Movement Flag Manipulation//
@@ -424,7 +153,7 @@ void UCMCTestCharacterMovementComponent::OnMovementModeChanged(EMovementMode Pre
    * If that designer/programmer just sets the movement mode directly, you're going to be left with no collision. Or worse, in a networked environment you might have complete variable desync if done incorrectly.
    * Therefore, you need to ensure that everyone REQUESTS a movement mode change using a particular function.
    * In this case, we use SetMovementMode, which will then always call this function.
-   * Using SetMovementMode is NOT inherently network-replicated if triggered by a client, so adding a RequestMovementModeChange() function can be useful to flip-flop our network prediction flags (like bWantsToSprint) and perform other checks.
+   * Using SetMovementMode is NOT inherently network-replicated if triggered by a client, so adding a RequestMovementModeChange() function can be useful to flip-flop our network prediction flags (like) and perform other checks.
    * Thus, no matter what dynamic bit of gameplay code triggers a movement change, it will be caught by this function and properly EXIT a mode before ENTERing the next.
    * This design pattern is handy for many systems, as mentioned, but movement is one such place where it can be essential.
    */
@@ -432,12 +161,6 @@ void UCMCTestCharacterMovementComponent::OnMovementModeChanged(EMovementMode Pre
   // First, call exit code for the PREVIOUS movement mode.
   if (PreviousMovementMode == MOVE_Custom)
   {
-
-    switch (PreviousCustomMode)
-    {
-    case MOVE_WallRunning:
-      ExitWallRun();
-    }
   }
   else
   {
@@ -451,12 +174,6 @@ void UCMCTestCharacterMovementComponent::OnMovementModeChanged(EMovementMode Pre
   // Next, call entry code for the NEW movement mode.
   if (MovementMode == MOVE_Custom)
   {
-
-    switch (CustomMovementMode)
-    {
-    case MOVE_WallRunning:
-      EnterWallRun();
-    }
   }
   else
   {
@@ -474,43 +191,6 @@ void UCMCTestCharacterMovementComponent::OnMovementModeChanged(EMovementMode Pre
    * If you need to modify the direct parent's Super but still want the rest of the chain to trigger, you can always call Super::Super:: or call a particular parent function up the chain (like UPawnMovementComponent::OnMovementModeChanged, which does not exist in this case).
    */
   Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
-}
-
-/*
- * A super useful function! This function is called prior to the movement update, making it a great place to initiate certain logic.
- * We can start sprinting or begin wall running, for instance. Observe the Super (parent) function to see how it's currently used for crouch logic.
- */
-void UCMCTestCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
-{
-  Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
-  // Proxies get replicated state. We don't need to run this logic for them.
-  if (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)
-  {
-    // Sprinting
-    if (CanSprint())
-    {
-      bIsSprinting = true;
-    }
-    else
-    {
-      bIsSprinting = false;
-    }
-
-    // Wall Run
-    if (IsFalling())
-    {
-      TryWallRun();
-    }
-  }
-}
-
-/*
- * As you'd imagine, this function is called at the end of a movement update. Good place to add code or checks to clean up certain functionality.
- * In the parent function, this performs one last check to see if the character should uncrouch.
- */
-void UCMCTestCharacterMovementComponent::UpdateCharacterStateAfterMovement(float DeltaSeconds)
-{
-  Super::UpdateCharacterStateAfterMovement(DeltaSeconds);
 }
 
 // Called on tick, can be used for setting values and movement modes for next tick.
@@ -559,38 +239,6 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float DeltaSeconds, c
 
 #pragma endregion
 
-#pragma region Helpers
-// Various helper functions to save time.
-float UCMCTestCharacterMovementComponent::OwnerCapsuleRadius() const
-{
-  // return CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius();
-  return 0;
-}
-
-float UCMCTestCharacterMovementComponent::OwnerCapsuleHalfHeight() const
-{
-  // return CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-  return 0;
-}
-
-#pragma endregion
-
-#pragma region Replication (LifetimeReplicatedProps + OnReps)
-
-// Standard replication function
-void UCMCTestCharacterMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
-{
-  Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-  DOREPLIFETIME_CONDITION(ThisClass, bIsSprinting, COND_SimulatedOnly);
-  DOREPLIFETIME_CONDITION(ThisClass, bWallRunIsRight, COND_SimulatedOnly);
-}
-
-// On Reps allow us to perform logic upon receiving a server update.
-// Keep your on reps close to LifetimeRepProps in their own replication section, like this, so they can easily be tracked.
-
-#pragma endregion
-
 /////BEGIN Networking/////
 #pragma region Networked Movement
 /*
@@ -610,7 +258,7 @@ void UCMCTestCharacterMovementComponent::MoveAutonomous(float ClientTimeStamp, f
   FCustomNetworkMoveData *CurrentMoveData = static_cast<FCustomNetworkMoveData *>(GetCurrentNetworkMoveData());
   if (CurrentMoveData != nullptr)
   {
-    bWantsToSprint = CurrentMoveData->bWantsToSprintMoveData;
+
     bWantsToLaunch = CurrentMoveData->bWantsToLaunchMoveData;
 
     // If you still wanted to use bools AND bitflags, you could unpack movement flags like this.
@@ -618,7 +266,6 @@ void UCMCTestCharacterMovementComponent::MoveAutonomous(float ClientTimeStamp, f
     // EXAMPLE:
     // bWantsToFly = (CurrentMoveData->MovementFlagCustomMoveData & (uint8)EMovementFlag::CFLAG_WantsToFly) != 0;
 
-    CustomMaxSpeed = CurrentMoveData->MaxCustomSpeedMoveData;
     LaunchVelocityCustom = CurrentMoveData->LaunchVelocityCustomMoveData;
 
     MovementFlagCustom = CurrentMoveData->MovementFlagCustomMoveData;
@@ -631,7 +278,6 @@ bool FCustomNetworkMoveData::Serialize(UCharacterMovementComponent &CharacterMov
 {
   Super::Serialize(CharacterMovement, Ar, PackageMap, MoveType);
 
-  SerializeOptionalValue<bool>(Ar.IsSaving(), Ar, bWantsToSprintMoveData, false);
   SerializeOptionalValue<bool>(Ar.IsSaving(), Ar, bWantsToLaunchMoveData, false);
   SerializeOptionalValue<float>(Ar.IsSaving(), Ar, MaxCustomSpeedMoveData, 800.f);
   SerializeOptionalValue<FVector>(Ar.IsSaving(), Ar, LaunchVelocityCustomMoveData, FVector(0.f, 0.f, 0.f));
@@ -647,7 +293,6 @@ void FCustomNetworkMoveData::ClientFillNetworkMoveData(const FSavedMove_Characte
 
   const FCustomSavedMove &CurrentSavedMove = static_cast<const FCustomSavedMove &>(ClientMove);
 
-  bWantsToSprintMoveData = CurrentSavedMove.bWantsToSprintSaved;
   bWantsToLaunchMoveData = CurrentSavedMove.bWantsToLaunchSaved;
   MaxCustomSpeedMoveData = CurrentSavedMove.SavedMaxCustomSpeed;
   LaunchVelocityCustomMoveData = CurrentSavedMove.SavedLaunchVelocityCustom;
@@ -660,17 +305,7 @@ bool FCustomSavedMove::CanCombineWith(const FSavedMovePtr &NewMove, ACharacter *
 {
   FCustomSavedMove *NewMovePtr = static_cast<FCustomSavedMove *>(NewMove.Get());
 
-  if (bWantsToSprintSaved != NewMovePtr->bWantsToSprintSaved)
-  {
-    return false;
-  }
-
   if (bWantsToLaunchSaved != NewMovePtr->bWantsToLaunchSaved)
-  {
-    return false;
-  }
-
-  if (bWallRunIsRightSaved != NewMovePtr->bWallRunIsRightSaved)
   {
     return false;
   }
@@ -702,11 +337,8 @@ void FCustomSavedMove::SetMoveFor(ACharacter *Character, float InDeltaTime, FVec
   UCMCTestCharacterMovementComponent *CharacterMovement = Cast<UCMCTestCharacterMovementComponent>(Character->GetCharacterMovement());
   if (CharacterMovement)
   {
-    bWantsToSprintSaved = CharacterMovement->bWantsToSprint;
     bWantsToLaunchSaved = CharacterMovement->bWantsToLaunch;
-    bWallRunIsRightSaved = CharacterMovement->bWallRunIsRight;
 
-    SavedMaxCustomSpeed = CharacterMovement->CustomMaxSpeed;
     SavedLaunchVelocityCustom = CharacterMovement->LaunchVelocityCustom;
 
     SavedMovementFlagCustom = CharacterMovement->MovementFlagCustom;
@@ -721,11 +353,8 @@ void FCustomSavedMove::PrepMoveFor(ACharacter *Character)
   UCMCTestCharacterMovementComponent *CharacterMovementComponent = Cast<UCMCTestCharacterMovementComponent>(Character->GetCharacterMovement());
   if (CharacterMovementComponent)
   {
-    CharacterMovementComponent->bWantsToSprint = bWantsToSprintSaved;
     CharacterMovementComponent->bWantsToLaunch = bWantsToLaunchSaved;
-    CharacterMovementComponent->bWallRunIsRight = bWallRunIsRightSaved;
 
-    CharacterMovementComponent->CustomMaxSpeed = SavedMaxCustomSpeed;
     CharacterMovementComponent->LaunchVelocityCustom = SavedLaunchVelocityCustom;
 
     CharacterMovementComponent->MovementFlagCustom = SavedMovementFlagCustom;
@@ -737,9 +366,7 @@ void FCustomSavedMove::Clear()
 {
   Super::Clear();
 
-  bWantsToSprintSaved = false;
   bWantsToLaunchSaved = false;
-  bWallRunIsRightSaved = false;
 
   SavedMaxCustomSpeed = 800.f;
   SavedLaunchVelocityCustom = FVector(0.f, 0.f, 0.f);
