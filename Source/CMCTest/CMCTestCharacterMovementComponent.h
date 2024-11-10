@@ -4,44 +4,49 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CMCTestCharacterMovementComponent.generated.h"
 
+class FCustomSavedMove : public FSavedMove_Character
+{
+  typedef FSavedMove_Character Super;
+
+public:
+  bool bWantsToLaunchSaved;
+
+  virtual bool CanCombineWith(const FSavedMovePtr &newMove, ACharacter *character, float maxDelta) const override;
+  virtual void Clear() override;
+  virtual void SetMoveFor(
+      ACharacter *character,
+      float inDeltaTime,
+      FVector const &newAccel,
+      FNetworkPredictionData_Client_Character &clientData) override;
+  virtual void PrepMoveFor(class ACharacter *character) override;
+};
+
 class FCustomNetworkMoveData : public FCharacterNetworkMoveData
 {
 public:
   typedef FCharacterNetworkMoveData Super;
 
-  virtual void ClientFillNetworkMoveData(const FSavedMove_Character &ClientMove, ENetworkMoveType MoveType) override;
-
-  virtual bool Serialize(UCharacterMovementComponent &CharacterMovement, FArchive &Ar, UPackageMap *PackageMap, ENetworkMoveType MoveType) override;
-
   bool bWantsToLaunchMoveData;
+
+  virtual void ClientFillNetworkMoveData(const FSavedMove_Character &clientMove, ENetworkMoveType moveType) override;
+  virtual bool Serialize(
+      UCharacterMovementComponent &characterMovement,
+      FArchive &archive,
+      UPackageMap *packageMap,
+      ENetworkMoveType moveType) override;
 };
 
 class FCustomCharacterNetworkMoveDataContainer : public FCharacterNetworkMoveDataContainer
 {
-
 public:
   FCustomCharacterNetworkMoveDataContainer();
-
   FCustomNetworkMoveData CustomDefaultMoveData[3];
-};
-
-class FCustomSavedMove : public FSavedMove_Character
-{
-public:
-  typedef FSavedMove_Character Super;
-
-  bool bWantsToLaunchSaved;
-
-  virtual bool CanCombineWith(const FSavedMovePtr &NewMove, ACharacter *Character, float MaxDelta) const override;
-  virtual void SetMoveFor(ACharacter *Character, float InDeltaTime, FVector const &NewAccel, class FNetworkPredictionData_Client_Character &ClientData) override;
-  virtual void PrepMoveFor(class ACharacter *Character) override;
-  virtual void Clear() override;
 };
 
 class FCustomNetworkPredictionData_Client : public FNetworkPredictionData_Client_Character
 {
 public:
-  FCustomNetworkPredictionData_Client(const UCharacterMovementComponent &ClientMovement);
+  FCustomNetworkPredictionData_Client(const UCharacterMovementComponent &clientMovement);
   typedef FNetworkPredictionData_Client_Character Super;
   virtual FSavedMovePtr AllocateNewMove() override;
 };
@@ -50,26 +55,21 @@ UCLASS()
 class UCMCTestCharacterMovementComponent : public UCharacterMovementComponent
 {
   GENERATED_BODY()
+protected:
+  FCustomCharacterNetworkMoveDataContainer MoveDataContainer;
 
 public:
-  UCMCTestCharacterMovementComponent(const FObjectInitializer &ObjectInitializer);
-
-  friend class FCustomSavedMove;
+  UCMCTestCharacterMovementComponent(const FObjectInitializer &objectInitializer);
+  virtual void BeginPlay() override;
+  virtual FNetworkPredictionData_Client *GetPredictionData_Client() const override;
+  virtual void MoveAutonomous(float clientTimeStamp, float deltaTime, uint8 compressedFlags, const FVector &newAccel)
+      override;
+  virtual void OnMovementUpdated(float deltaSeconds, const FVector &oldLocation, const FVector &oldVelocity) override;
 
   bool bWantsToLaunch;
 
-public:
   UFUNCTION(BlueprintCallable)
   void StartLaunching();
   UFUNCTION(BlueprintCallable)
   void StopLaunching();
-
-public:
-  virtual void BeginPlay() override;
-  virtual void OnMovementUpdated(float DeltaSeconds, const FVector &OldLocation, const FVector &OldVelocity) override;
-
-public:
-  FCustomCharacterNetworkMoveDataContainer MoveDataContainer;
-  virtual void MoveAutonomous(float ClientTimeStamp, float DeltaTime, uint8 CompressedFlags, const FVector &NewAccel) override;
-  virtual class FNetworkPredictionData_Client *GetPredictionData_Client() const override;
 };
