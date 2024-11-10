@@ -40,7 +40,7 @@ class FCustomCharacterNetworkMoveDataContainer : public FCharacterNetworkMoveDat
 {
 public:
   FCustomCharacterNetworkMoveDataContainer();
-  FCustomNetworkMoveData CustomDefaultMoveData[3];
+  FCustomNetworkMoveData MoveData[3];
 };
 
 class FCustomNetworkPredictionData_Client : public FNetworkPredictionData_Client_Character
