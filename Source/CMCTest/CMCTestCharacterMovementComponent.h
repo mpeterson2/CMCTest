@@ -16,7 +16,6 @@ public:
   virtual bool Serialize(UCharacterMovementComponent &CharacterMovement, FArchive &Ar, UPackageMap *PackageMap, ENetworkMoveType MoveType) override;
 
   bool bWantsToLaunchMoveData;
-  FVector LaunchVelocityCustomMoveData;
 };
 
 class FCustomCharacterNetworkMoveDataContainer : public FCharacterNetworkMoveDataContainer
@@ -34,7 +33,6 @@ public:
   typedef FSavedMove_Character Super;
 
   bool bWantsToLaunchSaved;
-  FVector SavedLaunchVelocityCustom;
 
   virtual bool CanCombineWith(const FSavedMovePtr &NewMove, ACharacter *Character, float MaxDelta) const override;
   virtual void SetMoveFor(ACharacter *Character, float InDeltaTime, FVector const &NewAccel, class FNetworkPredictionData_Client_Character &ClientData) override;
@@ -67,9 +65,6 @@ public:
   void StartLaunching();
   UFUNCTION(BlueprintCallable)
   void StopLaunching();
-
-  void LaunchCharacterReplicated(FVector NewLaunchVelocity, bool bXYOverride, bool bZOverride);
-  FVector LaunchVelocityCustom;
 
 protected:
   UPROPERTY(Transient, DuplicateTransient)

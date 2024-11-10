@@ -15,29 +15,6 @@ void UCMCTestCharacterMovementComponent::BeginPlay()
   CustomCharacter = Cast<ACMCTestCharacter>(PawnOwner);
 }
 
-void UCMCTestCharacterMovementComponent::LaunchCharacterReplicated(FVector NewLaunchVelocity, bool bXYOverride, bool bZOverride)
-{
-  if (!CustomCharacter)
-  {
-    return;
-  }
-
-  FVector FinalVel = NewLaunchVelocity;
-
-  if (!bXYOverride)
-  {
-    FinalVel.X += Velocity.X;
-    FinalVel.Y += Velocity.Y;
-  }
-  if (!bZOverride)
-  {
-    FinalVel.Z += LastUpdateVelocity.Z;
-  }
-
-  LaunchVelocityCustom = FinalVel;
-  CustomCharacter->OnLaunched(NewLaunchVelocity, bXYOverride, bZOverride);
-}
-
 void UCMCTestCharacterMovementComponent::StartLaunching()
 {
   bWantsToLaunch = true;
@@ -55,13 +32,7 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float DeltaSeconds, c
   if (bWantsToLaunch)
   {
     auto velocity = GetCharacterOwner()->GetViewRotation().Vector() * 1000;
-    LaunchCharacterReplicated(velocity, true, true);
-  }
-
-  if ((MovementMode != MOVE_None) && IsActive() && HasValidData())
-  {
-    PendingLaunchVelocity = LaunchVelocityCustom;
-    LaunchVelocityCustom = FVector::ZeroVector;
+    Launch(velocity);
   }
 }
 
@@ -70,10 +41,7 @@ void UCMCTestCharacterMovementComponent::MoveAutonomous(float ClientTimeStamp, f
   FCustomNetworkMoveData *CurrentMoveData = static_cast<FCustomNetworkMoveData *>(GetCurrentNetworkMoveData());
   if (CurrentMoveData != nullptr)
   {
-
     bWantsToLaunch = CurrentMoveData->bWantsToLaunchMoveData;
-
-    LaunchVelocityCustom = CurrentMoveData->LaunchVelocityCustomMoveData;
   }
   Super::MoveAutonomous(ClientTimeStamp, DeltaTime, CompressedFlags, NewAccel);
 }
@@ -83,7 +51,6 @@ bool FCustomNetworkMoveData::Serialize(UCharacterMovementComponent &CharacterMov
   Super::Serialize(CharacterMovement, Ar, PackageMap, MoveType);
 
   SerializeOptionalValue<bool>(Ar.IsSaving(), Ar, bWantsToLaunchMoveData, false);
-  SerializeOptionalValue<FVector>(Ar.IsSaving(), Ar, LaunchVelocityCustomMoveData, FVector::ZeroVector);
 
   return !Ar.IsError();
 }
@@ -95,7 +62,6 @@ void FCustomNetworkMoveData::ClientFillNetworkMoveData(const FSavedMove_Characte
   const FCustomSavedMove &CurrentSavedMove = static_cast<const FCustomSavedMove &>(ClientMove);
 
   bWantsToLaunchMoveData = CurrentSavedMove.bWantsToLaunchSaved;
-  LaunchVelocityCustomMoveData = CurrentSavedMove.SavedLaunchVelocityCustom;
 }
 
 bool FCustomSavedMove::CanCombineWith(const FSavedMovePtr &NewMove, ACharacter *Character, float MaxDelta) const
@@ -103,11 +69,6 @@ bool FCustomSavedMove::CanCombineWith(const FSavedMovePtr &NewMove, ACharacter *
   FCustomSavedMove *NewMovePtr = static_cast<FCustomSavedMove *>(NewMove.Get());
 
   if (bWantsToLaunchSaved != NewMovePtr->bWantsToLaunchSaved)
-  {
-    return false;
-  }
-
-  if (SavedLaunchVelocityCustom != NewMovePtr->SavedLaunchVelocityCustom)
   {
     return false;
   }
@@ -123,8 +84,6 @@ void FCustomSavedMove::SetMoveFor(ACharacter *Character, float InDeltaTime, FVec
   if (CharacterMovement)
   {
     bWantsToLaunchSaved = CharacterMovement->bWantsToLaunch;
-
-    SavedLaunchVelocityCustom = CharacterMovement->LaunchVelocityCustom;
   }
 }
 
@@ -136,8 +95,6 @@ void FCustomSavedMove::PrepMoveFor(ACharacter *Character)
   if (CharacterMovementComponent)
   {
     CharacterMovementComponent->bWantsToLaunch = bWantsToLaunchSaved;
-
-    CharacterMovementComponent->LaunchVelocityCustom = SavedLaunchVelocityCustom;
   }
 }
 
@@ -146,7 +103,6 @@ void FCustomSavedMove::Clear()
   Super::Clear();
 
   bWantsToLaunchSaved = false;
-  SavedLaunchVelocityCustom = FVector::ZeroVector;
 }
 
 FNetworkPredictionData_Client *UCMCTestCharacterMovementComponent::GetPredictionData_Client() const
