@@ -117,6 +117,16 @@ void UCMCTestCharacterMovementComponent::OnMovementUpdated(float deltaSeconds, c
 {
   Super::OnMovementUpdated(deltaSeconds, oldLocation, oldVelocity);
 
+  if (WantsToPullLocally)
+  {
+    UE_LOG(LogTemp, Warning, TEXT("has auth? %s"), GetOwner()->HasAuthority() ? TEXT("true") : TEXT("false"));
+  }
+
+  if (GetPawnOwner()->IsLocallyControlled())
+  {
+    WantsToPull = WantsToPullLocally;
+  }
+
   if (!IsPulling && WantsToPull)
   {
     auto rotation = CharacterOwner->GetViewRotation().Vector();
