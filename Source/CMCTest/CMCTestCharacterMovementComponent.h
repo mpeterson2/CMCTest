@@ -68,6 +68,7 @@ public:
       override;
   virtual void OnMovementUpdated(float deltaSeconds, const FVector &oldLocation, const FVector &oldVelocity) override;
 
+  bool WantsToPullLocally;
   bool WantsToPull;
 
   bool IsPulling;
